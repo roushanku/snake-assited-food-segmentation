@@ -44,6 +44,101 @@ def show_images(images, titles=None, figsize=(15, 5)):
 image = load_image("/content/8007a59.jpg")
 show_images([image])
 
+
+def remove_background(image, bins=32, background_color=(255, 255, 255), threshold_factor=1.5):
+    """
+    Remove background using the paper's histogram approach with improvements
+    Args:
+        image: Input RGB image
+        bins: Number of bins per channel (paper uses 32)
+        background_color: Color to replace background with
+        threshold_factor: Factor to determine background frequency threshold
+    Returns:
+        bg_removed: Image with background removed
+        background_mask: Binary mask of background regions
+    """
+    # Convert to LAB color space for better color differentiation
+    lab_image = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
+    pixels = lab_image.reshape(-1, 3)
+
+    # Calculate bin indices for each pixel
+    bin_size = 256 // bins
+    bin_indices = (pixels // bin_size).astype(int)
+
+    # Clip to ensure indices are within range
+    bin_indices = np.clip(bin_indices, 0, bins-1)
+
+    # Find most frequent bin combination
+    bin_counts = defaultdict(int)
+    for l, a, b in bin_indices:
+        bin_counts[(l, a, b)] += 1
+
+    # Sort bins by frequency
+    sorted_bins = sorted(bin_counts.items(), key=lambda x: x[1], reverse=True)
+
+    # Get the most frequent bin (likely background)
+    background_bin = sorted_bins[0][0]
+    background_count = sorted_bins[0][1]
+
+    # Calculate threshold for similar bins (consider them as background too)
+    threshold = background_count / threshold_factor
+
+    # Find bins that are similar to the background bin (likely also background)
+    background_bins = [background_bin]
+    for bin_key, count in sorted_bins[1:5]:  # Check the next few most frequent bins
+        if count > threshold:
+            # Check if the bin is similar to the background bin
+            l_diff = abs(bin_key[0] - background_bin[0])
+            a_diff = abs(bin_key[1] - background_bin[1])
+            b_diff = abs(bin_key[2] - background_bin[2])
+
+            # If the bin is similar in color to the background bin, add it
+            if l_diff <= 1 and a_diff <= 1 and b_diff <= 1:
+                background_bins.append(bin_key)
+
+    # Convert back to original shape
+    bin_indices_reshaped = bin_indices.reshape(image.shape[:2] + (3,))
+
+    # Create background mask - pixels in any of the background bins
+    background_mask = np.zeros(image.shape[:2], dtype=bool)
+    for bg_bin in background_bins:
+        mask_l = bin_indices_reshaped[:, :, 0] == bg_bin[0]
+        mask_a = bin_indices_reshaped[:, :, 1] == bg_bin[1]
+        mask_b = bin_indices_reshaped[:, :, 2] == bg_bin[2]
+        bin_mask = mask_l & mask_a & mask_b
+        background_mask = background_mask | bin_mask
+
+    # Apply morphological operations to clean up the mask
+    kernel = np.ones((5, 5), np.uint8)
+    background_mask = background_mask.astype(np.uint8)
+    background_mask = cv2.morphologyEx(background_mask, cv2.MORPH_CLOSE, kernel)
+    background_mask = cv2.morphologyEx(background_mask, cv2.MORPH_OPEN, kernel)
+
+    # Fill holes in the background mask
+    # Invert the mask to find holes
+    inverted_mask = 1 - background_mask
+    # Label connected components
+    num_labels, labels = cv2.connectedComponents(inverted_mask)
+
+    # If a component doesn't touch the border, it's a hole
+    for label in range(1, num_labels):
+        component = (labels == label)
+        # Check if component touches the border
+        if not (np.any(component[0, :]) or np.any(component[-1, :]) or
+                np.any(component[:, 0]) or np.any(component[:, -1])):
+            # It's a hole, fill it
+            background_mask[component] = 1
+
+    # Convert back to boolean
+    background_mask = background_mask.astype(bool)
+
+    # Replace background
+    bg_removed = image.copy()
+    bg_removed[background_mask] = background_color
+
+    return bg_removed, background_mask
+
+
 def initialize_contours(image_shape, num_contours=8):
     """
     Initialize multiple circular contours across the image
