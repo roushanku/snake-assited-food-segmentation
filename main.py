@@ -43,3 +43,41 @@ def show_images(images, titles=None, figsize=(15, 5)):
 
 image = load_image("/content/8007a59.jpg")
 show_images([image])
+
+def initialize_contours(image_shape, num_contours=8):
+    """
+    Initialize multiple circular contours across the image
+    Args:
+        image_shape: Shape of the input image (h, w, c)
+        num_contours: Number of contours to create (paper used 9-289)
+    Returns:
+        List of initialized contours (each contour is Nx2 array)
+    """
+    h, w = image_shape[:2]
+    contours = []
+
+    # Calculate grid size (nearest perfect square <= num_contours)
+    grid_size = int(np.sqrt(num_contours))
+    actual_num = grid_size ** 2
+
+    # Spacing between contours
+    x_spacing = w // (grid_size + 1)
+    y_spacing = h // (grid_size + 1)
+
+    # Radius of each circular contour
+    radius = min(x_spacing, y_spacing) // 3
+
+    # Create circular contours at grid points
+    for i in range(1, grid_size + 1):
+        for j in range(1, grid_size + 1):
+            center_x = j * x_spacing
+            center_y = i * y_spacing
+
+            # Generate points on circle
+            theta = np.linspace(0, 2*np.pi, 50)
+            x = center_x + radius * np.cos(theta)
+            y = center_y + radius * np.sin(theta)
+
+            contours.append(np.column_stack((x, y)))
+
+    return contours
