@@ -176,3 +176,129 @@ def initialize_contours(image_shape, num_contours=8):
             contours.append(np.column_stack((x, y)))
 
     return contours
+
+
+def calculate_energy(contour, gray_image):
+    """
+    Calculate the energy for a contour according to paper's Equations 1-3
+    Args:
+        contour: Current contour points (Nx2 array)
+        gray_image: Grayscale image (h x w)
+    Returns:
+        Total energy (E_int + E_ext)
+    """
+    # Create mask for pixels inside contour
+    mask = np.zeros(gray_image.shape, dtype=np.uint8)
+    cv2.fillPoly(mask, [contour.astype(int)], 1)
+
+    # Calculate mean intensities
+    mu_in = np.mean(gray_image[mask == 1])
+    mu_out = np.mean(gray_image[mask == 0])
+
+    # Internal energy (Equation 1)
+    diff_in = (gray_image - mu_in) ** 2
+    E_int = np.sum(diff_in * mask)
+
+    # External energy (Equation 2)
+    diff_out = (gray_image - mu_out) ** 2
+    E_ext = np.sum(diff_out * (1 - mask))
+
+    # Total energy (Equation 3)
+    return E_int + E_ext
+
+def evolve_contour(contour, gray_image, max_iter=50, step_size=2.0):
+    """
+    Evolve contour to minimize energy
+    Args:
+        contour: Initial contour points
+        gray_image: Input grayscale image
+        max_iter: Maximum iterations
+        step_size: Pixel movement step size
+    Returns:
+        evolved_contour: Final contour after evolution
+        energy_history: List of energy values during evolution
+    """
+    current_contour = contour.copy()
+    energy_history = []
+
+    for _ in range(max_iter):
+        current_energy = calculate_energy(current_contour, gray_image)
+        energy_history.append(current_energy)
+
+        # Generate candidate moves for each point
+        candidates = []
+        for i in range(len(current_contour)):
+            for dx, dy in [(0, step_size), (0, -step_size),
+                          (step_size, 0), (-step_size, 0)]:
+                candidate = current_contour.copy()
+                candidate[i] += [dx, dy]
+                candidates.append(candidate)
+
+        # Evaluate all candidates
+        candidate_energies = [calculate_energy(c, gray_image) for c in candidates]
+        best_idx = np.argmin(candidate_energies)
+
+        # Stop if no improvement
+        if candidate_energies[best_idx] >= current_energy:
+            break
+
+        current_contour = candidates[best_idx]
+
+    return current_contour, energy_history
+
+def segment_food(image, num_initial_contours=16, background_bins=32):
+    """
+    Complete food segmentation pipeline
+    Args:
+        image: Input RGB image
+        num_initial_contours: Number of initial contours
+        background_bins: Bins for background removal
+    Returns:
+        final_contours: List of final contours
+        bg_removed: Image with background removed
+    """
+    # 1. Remove background
+    bg_removed, bg_mask = remove_background(image, bins=background_bins)
+
+    # 2. Convert to grayscale for segmentation
+    gray = cv2.cvtColor(bg_removed, cv2.COLOR_RGB2GRAY).astype(float)
+    gray = (gray - gray.min()) / (gray.max() - gray.min())  # Normalize
+
+    # 3. Initialize contours
+    initial_contours = initialize_contours(image.shape, num_initial_contours)
+
+    # 4. Evolve contours
+    final_contours = []
+    for contour in initial_contours:
+        # Skip contours entirely in background
+        contour_points = contour.astype(int)
+        if np.all(bg_mask[contour_points[:,1], contour_points[:,0]]):
+            continue
+
+        evolved_contour, _ = evolve_contour(contour, gray)
+        final_contours.append(evolved_contour)
+
+    return final_contours, bg_removed
+
+
+# Example usage with sample image
+image_url = "/content/8007a59.jpg"  # Sample food image
+# Or use your own: "/content/drive/MyDrive/your_image.jpg"
+
+# Load image
+image = load_image(image_url)
+print("Original image size:", image.shape)
+
+# Run segmentation
+final_contours, bg_removed = segment_food(image, 4)
+
+# Initialize contours for visualization
+initial_contours = initialize_contours(image.shape, 16)
+
+# Create visualizations
+initial_display = draw_contours(image, initial_contours, (255, 0, 0))  # Red
+final_display = draw_contours(bg_removed, final_contours, (0, 0, 255))  # Blue
+
+# Show results
+show_images([image, initial_display, final_display],
+            ["Original Image", "Initial Contours", "Final Segmentation"])
