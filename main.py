@@ -178,6 +178,25 @@ def initialize_contours(image_shape, num_contours=8):
     return contours
 
 
+def draw_contours(image, contours, color, thickness=2):
+    """
+    Draw contours on an image
+    Args:
+        image: Background image
+        contours: List of contours
+        color: RGB tuple for contour color
+        thickness: Contour line thickness
+    Returns:
+        Image with drawn contours
+    """
+    display = image.copy()
+    for contour in contours:
+        contour = contour.astype(int)
+        cv2.polylines(display, [contour], True, color, thickness)
+    return display
+
+
+
 def calculate_energy(contour, gray_image):
     """
     Calculate the energy for a contour according to paper's Equations 1-3
