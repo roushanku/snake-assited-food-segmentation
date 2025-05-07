@@ -20,9 +20,94 @@ The project uses several computer vision techniques:
 - Matplotlib
 - scikit-image
 - PIL (Python Imaging Library)
+- Requests
+
+## Installation
+
+### Option 1: Local Installation
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/snake-assisted-food-segmentation.git
+   cd snake-assisted-food-segmentation
+   ```
+
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+### Option 2: Google Colab
+1. Open Google Colab: https://colab.research.google.com/
+2. Upload the `main.py` file or copy its contents into a new notebook
+3. Run the cells to execute the code
 
 ## Usage
-The code is designed to work in a Google Colab environment, but can be adapted for local use. It can process images from local paths or URLs.
+
+### Running the Code
+1. **Local Execution**:
+   ```
+   python main.py
+   ```
+
+   By default, the script uses a sample image. To use your own image, modify the image path in the script:
+   ```python
+   image_url = "path/to/your/image.jpg"  # Local path
+   # or
+   image_url = "https://example.com/image.jpg"  # URL
+   ```
+
+2. **Google Colab**:
+   - To use your own images in Colab, uncomment and run the Google Drive mount code:
+     ```python
+     from google.colab import drive
+     drive.mount('/content/drive')
+     ```
+   - Then update the image path to point to your Drive:
+     ```python
+     image_url = "/content/drive/MyDrive/your_image.jpg"
+     ```
+
+### Adjusting Parameters
+- Modify `num_initial_contours` to change the number of initial contours
+- Adjust `background_bins` to fine-tune background removal
+- Change visualization options in the `show_images` function
+
+## Example Output
+The script will display three images:
+1. Original input image
+2. Image with initial contours (red)
+3. Background-removed image with final segmentation contours (blue)
+
+## Evaluation Metrics
+
+The project now includes evaluation metrics and visualizations to analyze the performance of the segmentation algorithm:
+
+### Available Metrics
+
+1. **Energy Convergence Visualization**: Plots how the energy function decreases during contour evolution
+2. **Execution Time Analysis**: Measures and visualizes the time taken for each step of the segmentation process
+3. **Parameter Sensitivity Analysis**: Analyzes how segmentation quality changes with different parameters
+
+### Running Evaluation
+
+To run the evaluation metrics:
+
+```
+python evaluation.py
+```
+
+This will:
+1. Download sample images if none are available
+2. Perform detailed timing analysis of each segmentation step
+3. Analyze segmentation performance with different parameter combinations
+4. Visualize energy convergence during contour evolution
+
+### Customizing Evaluation
+
+You can modify the evaluation parameters in `evaluation.py`:
+- Change the list of contour counts to test
+- Adjust the background bin values
+- Add your own custom metrics
 
 ## References
 This implementation is based on techniques from computer vision research in food image analysis and segmentation.

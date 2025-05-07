@@ -1,12 +1,20 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from google.colab.patches import cv2_imshow
+import time
 from skimage.segmentation import active_contour
 from collections import defaultdict
 import requests
 from io import BytesIO
 from PIL import Image
+import os
+
+# Try to import Google Colab specific modules, but don't fail if not in Colab
+try:
+    from google.colab.patches import cv2_imshow
+    IN_COLAB = True
+except ImportError:
+    IN_COLAB = False
 
 # Mount Google Drive if using your own images
 # from google.colab import drive
@@ -40,9 +48,6 @@ def show_images(images, titles=None, figsize=(15, 5)):
         plt.axis('off')
     plt.tight_layout()
     plt.show()
-
-image = load_image("/content/8007a59.jpg")
-show_images([image])
 
 
 def remove_background(image, bins=32, background_color=(255, 255, 255), threshold_factor=1.5):
@@ -300,24 +305,47 @@ def segment_food(image, num_initial_contours=16, background_bins=32):
     return final_contours, bg_removed
 
 
-# Example usage with sample image
-image_url = "/content/8007a59.jpg"  # Sample food image
-# Or use your own: "/content/drive/MyDrive/your_image.jpg"
+def main():
+    """Main function to run the segmentation"""
+    # Check if sample_images directory exists, if not create it
+    if not os.path.exists('sample_images'):
+        os.makedirs('sample_images')
+        print("Created sample_images directory. Please add some food images to this directory.")
+        return
 
-# Load image
-image = load_image(image_url)
-print("Original image size:", image.shape)
+    # Get list of images in sample_images directory
+    image_files = [f for f in os.listdir('sample_images') if f.endswith(('.jpg', '.jpeg', '.png'))]
 
-# Run segmentation
-final_contours, bg_removed = segment_food(image, 4)
+    if not image_files:
+        print("No images found in sample_images directory. Please add some food images.")
+        return
 
-# Initialize contours for visualization
-initial_contours = initialize_contours(image.shape, 16)
+    # Use the first image
+    image_path = os.path.join('sample_images', image_files[0])
+    print(f"Using image: {image_path}")
 
-# Create visualizations
-initial_display = draw_contours(image, initial_contours, (255, 0, 0))  # Red
-final_display = draw_contours(bg_removed, final_contours, (0, 0, 255))  # Blue
+    # Load image
+    image = load_image(image_path)
+    print("Original image size:", image.shape)
 
-# Show results
-show_images([image, initial_display, final_display],
-            ["Original Image", "Initial Contours", "Final Segmentation"])
+    # Run segmentation
+    start_time = time.time()
+    final_contours, bg_removed = segment_food(image, 4)
+    total_time = time.time() - start_time
+    print(f"Segmentation completed in {total_time:.2f} seconds")
+
+    # Initialize contours for visualization
+    initial_contours = initialize_contours(image.shape, 16)
+
+    # Create visualizations
+    initial_display = draw_contours(image, initial_contours, (255, 0, 0))  # Red
+    final_display = draw_contours(bg_removed, final_contours, (0, 0, 255))  # Blue
+
+    # Show results
+    show_images([image, initial_display, final_display],
+                ["Original Image", "Initial Contours", "Final Segmentation"])
+
+    print("\nTo run evaluation metrics, use: python evaluation.py")
+
+if __name__ == "__main__":
+    main()
