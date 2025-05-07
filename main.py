@@ -321,7 +321,7 @@ def main():
         return
 
     # Use the first image
-    image_path = os.path.join('sample_images', image_files[0])
+    image_path = os.path.join('sample_images', image_files[1])
     print(f"Using image: {image_path}")
 
     # Load image
@@ -344,8 +344,6 @@ def main():
     # Show results
     show_images([image, initial_display, final_display],
                 ["Original Image", "Initial Contours", "Final Segmentation"])
-
-    print("\nTo run evaluation metrics, use: python evaluation.py")
 
 if __name__ == "__main__":
     main()

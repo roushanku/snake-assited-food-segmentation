@@ -88,13 +88,6 @@ The project now includes evaluation metrics and visualizations to analyze the pe
 2. **Execution Time Analysis**: Measures and visualizes the time taken for each step of the segmentation process
 3. **Parameter Sensitivity Analysis**: Analyzes how segmentation quality changes with different parameters
 
-### Running Evaluation
-
-To run the evaluation metrics:
-
-```
-python evaluation.py
-```
 
 This will:
 1. Download sample images if none are available
@@ -102,12 +95,6 @@ This will:
 3. Analyze segmentation performance with different parameter combinations
 4. Visualize energy convergence during contour evolution
 
-### Customizing Evaluation
-
-You can modify the evaluation parameters in `evaluation.py`:
-- Change the list of contour counts to test
-- Adjust the background bin values
-- Add your own custom metrics
 
 ## References
 This implementation is based on techniques from computer vision research in food image analysis and segmentation.
